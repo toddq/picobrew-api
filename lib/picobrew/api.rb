@@ -164,7 +164,7 @@ class Picobrew::Api
         log "Get Session Notes for #{session_id}"
         if session_id.length > 6
             session_id = get_short_session_id_for_guid(session_id)
-            raise Exception "No short session id for guid" if session_id.nil?
+            raise Exception, "No short session id for guid" if session_id.nil?
             log "Get Session Notes for #{session_id}"
         end
         begin
@@ -176,13 +176,22 @@ class Picobrew::Api
         end
     end
 
+	def get_recipe_id_for_session_id(session_guid)
+		session = find_session(session_guid)
+		return session['RecipeGUID'] if !session.nil?
+	end
+
     def get_short_session_id_for_guid(session_guid)
+				session = find_session(session_guid)
+        return session['ID'] if !session.nil?
+    end
+
+		def find_session(session_guid)
         # TODO: how/when to update cache once it's created
         cache_sessions if @cached_sessions.empty?
         log "Looking up short session id for #{session_guid}"
-        session = @cached_sessions.find {|session| session['GUID'] == session_guid}
-        return session['ID'] if !session.nil?
-    end
+        return @cached_sessions.find {|session| session['GUID'] == session_guid}
+		end
 
     def cache_sessions()
         log "Caching sesions"
@@ -194,7 +203,8 @@ class Picobrew::Api
         begin
         	options = options({:body => {'option' => 'getZymaticsForUser', 'getActiveSession' => 'true'}})
         	response = self.class.post('/JSONAPI/Zymatic/ZymaticSession.cshtml', options)
-            response.body
+					# TOOD: return json
+          response.body
         rescue Exception => e
         	log "Error: #{e}"
         end

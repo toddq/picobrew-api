@@ -9,7 +9,7 @@ The first version of this api provides some simple getters for various data from
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'picobrew-api', :github => 'toddq/picobrew-api'
+gem 'picobrew-api', :git => 'https://github.com/toddq/picobrew-api.git'
 ```
 
 And then execute:
