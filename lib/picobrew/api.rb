@@ -94,15 +94,18 @@ class Picobrew::Api
             page = Nokogiri::HTML(response.body)
             program = {'steps' => []}
             page.css('#stepTable tr').each do |row|
-                step = {}
-                row.css('input, select').each do |field|
-                    if field.name == 'select'
-                        step[field.attr('name')] = field.at_css('option[@selected="selected"]').text
-                    else
-                        step[field.attr('name')] = field.attr('value')
-                    end
-                end
-                program['steps'].push(step) if step.length > 0 && !step.values[0].nil?
+                next if row.at_css('input').nil?
+
+                step = {
+                    'index' => row.at_css('input')['data-index'].to_i,
+                    'name' => row.at_css('input[name*=Name]')['value'],
+                    'location' => row.at_css('select option[@selected=selected]').text,
+                    'targetTemp' => row.at_css('input[name*=Temp]')['value'].to_i,
+                    'time' => row.at_css('input[name*=Time]')['value'].to_i,
+                    'drain' => row.at_css('input[name*=Drain]')['value'].to_i
+                }
+
+                program['steps'].push(step) if !step['name'].nil?
             end
             program
         rescue Exception => e
@@ -182,20 +185,21 @@ class Picobrew::Api
 	end
 
     def get_short_session_id_for_guid(session_guid)
-				session = find_session(session_guid)
+		session = find_session(session_guid)
         return session['ID'] if !session.nil?
     end
 
-		def find_session(session_guid)
-        # TODO: how/when to update cache once it's created
-        cache_sessions if @cached_sessions.empty?
+	def find_session(session_guid)
         log "Looking up short session id for #{session_guid}"
+        # quick and dirty cache expiration
+        cache_sessions if @cached_sessions.empty? || @cached_at.to_i + 5 * 60 < Time.now.to_i
         return @cached_sessions.find {|session| session['GUID'] == session_guid}
-		end
+	end
 
     def cache_sessions()
         log "Caching sesions"
         @cached_sessions = get_all_sessions()
+        @cached_at = Time.now
     end
 
 	def get_active_session()
@@ -203,8 +207,8 @@ class Picobrew::Api
         begin
         	options = options({:body => {'option' => 'getZymaticsForUser', 'getActiveSession' => 'true'}})
         	response = self.class.post('/JSONAPI/Zymatic/ZymaticSession.cshtml', options)
-					# TOOD: return json
-          response.body
+			# TOOD: return json
+            response.body
         rescue Exception => e
         	log "Error: #{e}"
         end
