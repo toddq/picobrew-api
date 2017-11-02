@@ -7,53 +7,54 @@ end
 
 class Picobrew::Api
 
-	HOST = 'picobrew.com'
-	include HTTParty
-	base_uri 'https://picobrew.com'
-	# debug_output
+    HOST = 'picobrew.com'
+    include HTTParty
+    base_uri 'https://picobrew.com'
+    # debug_output
 
     attr_reader :cookies
 
-	def initialize(username, password, cookies = nil)
-		@username = username
-		@password = password
-		@http = Net::HTTP.new(HOST, 443)
-		@http.use_ssl = true
-		@http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    def initialize(username, password, cookies: nil, enableLogging: false)
+        @username = username
+        @password = password
+        @enableLogging = enableLogging
+        @http = Net::HTTP.new(HOST, 443)
+        @http.use_ssl = true
+        @http.verify_mode = OpenSSL::SSL::VERIFY_NONE
         @cached_sessions = []
 
-		log "Created Picobrew object for #{username}"
+        log "Created Picobrew object for #{username}"
         if !cookies.nil?
             log "Using provided cookies instead of logging in"
             @cookies = cookie_from_hash(cookies)
         else
             login()
         end
-	end
+    end
 
-	def login()
-		log "Logging in"
-		begin
+    def login()
+        log "Logging in"
+        begin
             options = {
                 :body => {'username' => @username, 'Password' => @password},
                 :headers => {'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8'},
                 :follow_redirects => false
             }
-	        response = self.class.post('/account/loginAjax.cshtml', options)
+            response = self.class.post('/account/loginAjax.cshtml', options)
             raise "No Set-Cookie in response" if response.get_fields('Set-Cookie').nil?
-	        @cookies = parse_cookie(response)
+            @cookies = parse_cookie(response)
         rescue Exception => e
             raise "Authentication error: #{e}"
         end
         log "logged in"
-	end
+    end
 
-	def logged_in?()
-		!@cookies.nil?
-	end
+    def logged_in?()
+        !@cookies.nil?
+    end
 
-	def get_all_recipes()
-		log "Get All Recipes"
+    def get_all_recipes()
+        log "Get All Recipes"
         begin
         	options = options({:body => {'option' => 'getAllRecipesForUser'}})
         	response = self.class.post('/JSONAPI/Zymatic/ZymaticRecipe.cshtml', options)
@@ -61,7 +62,7 @@ class Picobrew::Api
         rescue Exception => e
         	log "Error: #{e}"
         end
-	end
+    end
 
     def get_recipe(recipe_id)
         log "Scrape Recipe #{recipe_id}"
@@ -145,23 +146,23 @@ class Picobrew::Api
         end
     end
 
-	def get_session_log(session_id)
-		log "Get Session Log for #{session_id}"
+    def get_session_log(session_id)
+        log "Get Session Log for #{session_id}"
         # the sessions list contains references for guids, but the log api
         # wants a *different* id, so need to lookup one from the other
         if session_id.length > 6
             session_id = get_short_session_id_for_guid(session_id)
-            raise Exception "No short session id for guid" if session_id.nil?
+            raise Exception, "No short session id for guid" if session_id.nil?
             log "Get Session Log for #{session_id}"
         end
-		begin
-			options = options({:body => {'option' => 'getSessionLogs', 'sessionID' => session_id}})
-			response = self.class.post('/JSONAPI/Zymatic/ZymaticSession.cshtml', options)
-			body = JSON.parse(response.body)
-		rescue Exception => e
-			log "Error: #{e}"
-		end
-	end
+        begin
+            options = options({:body => {'option' => 'getSessionLogs', 'sessionID' => session_id}})
+            response = self.class.post('/JSONAPI/Zymatic/ZymaticSession.cshtml', options)
+            body = JSON.parse(response.body)
+        rescue Exception => e
+            log "Error: #{e}"
+        end
+    end
 
     def get_session_notes(session_id)
         log "Get Session Notes for #{session_id}"
@@ -179,22 +180,22 @@ class Picobrew::Api
         end
     end
 
-	def get_recipe_id_for_session_id(session_guid)
-		session = find_session(session_guid)
-		return session['RecipeGUID'] if !session.nil?
-	end
+    def get_recipe_id_for_session_id(session_guid)
+        session = find_session(session_guid)
+        return session['RecipeGUID'] if !session.nil?
+    end
 
     def get_short_session_id_for_guid(session_guid)
-		session = find_session(session_guid)
+        session = find_session(session_guid)
         return session['ID'] if !session.nil?
     end
 
-	def find_session(session_guid)
+    def find_session(session_guid)
         log "Looking up short session id for #{session_guid}"
         # quick and dirty cache expiration
         cache_sessions if @cached_sessions.empty? || @cached_at.to_i + 5 * 60 < Time.now.to_i
         return @cached_sessions.find {|session| session['GUID'] == session_guid}
-	end
+    end
 
     def cache_sessions()
         log "Caching sesions"
@@ -202,17 +203,17 @@ class Picobrew::Api
         @cached_at = Time.now
     end
 
-	def get_active_session()
+    def get_active_session()
         log "Get Active Session"
         begin
         	options = options({:body => {'option' => 'getZymaticsForUser', 'getActiveSession' => 'true'}})
         	response = self.class.post('/JSONAPI/Zymatic/ZymaticSession.cshtml', options)
-			# TOOD: return json
+            # TODO: return json?
             response.body
         rescue Exception => e
         	log "Error: #{e}"
         end
-	end
+    end
 
     # don't really understand this one, not sure if id is required
     def check_active(session_id)
@@ -255,11 +256,11 @@ class Picobrew::Api
         }.merge params
     end
 
-	def parse_cookie(resp)
-	    cookie_hash = CookieHash.new
-	    resp.get_fields('Set-Cookie').each { |c| cookie_hash.add_cookies(c) }
-	    cookie_hash
-	end
+    def parse_cookie(resp)
+        cookie_hash = CookieHash.new
+        resp.get_fields('Set-Cookie').each { |c| cookie_hash.add_cookies(c) }
+        cookie_hash
+    end
 
     def cookie_from_hash(hsh)
         cookie_hash = CookieHash.new
@@ -268,6 +269,6 @@ class Picobrew::Api
     end
 
     def log(msg)
-    	# puts msg
+    	puts msg if @enableLogging
     end
 end

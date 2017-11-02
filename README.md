@@ -9,7 +9,7 @@ The first version of this api provides some simple getters for various data from
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'picobrew-api', :git => 'https://github.com/toddq/picobrew-api.git'
+gem 'picobrew-api'
 ```
 
 And then execute:
@@ -28,6 +28,8 @@ session = picobrew.get_sessions_for_recipe(recipe['GUID']).first
 session_notes = picobrew.get_session_notes(session['id'])
 session_log = picobrew.get_session_log(session['id'])
 ```
+
+See my REST api at https://github.com/toddq/pico-proxy for more example usage, or just use that if it's all you need.
 
 ## Future
 
